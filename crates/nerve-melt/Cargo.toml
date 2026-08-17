@@ -1,0 +1,19 @@
+[package]
+name = "nerve-melt"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nerve-core.workspace = true
+nerve-topo.workspace = true
+# Reuse, not reimplement: the round-1 null model is the opponent both
+# mechanisms must defeat. nerve-baseline is frozen at 16/16 and read-only here.
+nerve-baseline = { path = "../nerve-baseline" }
+rand.workspace = true
+rand_chacha.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true

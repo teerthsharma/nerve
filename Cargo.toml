@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/nerve-core",
+  "crates/nerve-topo",
+  "crates/nerve-blind",
+  "crates/nerve-baseline",
+  "crates/nerve-order",
+  "crates/nerve-orient",
+  "crates/nerve-melt",
+  "crates/nerve-label",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+nerve-core = { path = "crates/nerve-core" }
+nerve-topo = { path = "crates/nerve-topo" }
+rand = "0.8"
+rand_chacha = "0.3"
+proptest = "1"

@@ -1,0 +1,26 @@
+[package]
+name = "nerve-orient"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nerve-core.workspace = true
+nerve-topo.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+# Reused rather than reimplemented, deliberately: the null model must be
+# Cameron's six features and Foreman's ACSF, bit for bit. A local
+# reimplementation of rg2/msid that drifted by a factor or an off-by-one would
+# produce a null model that looks like the real one and tests nothing.
+# Dev-only, so nerve-orient's public API does not depend on it.
+nerve-baseline = { path = "../nerve-baseline" }
+# Reuse over reimplement, second time: Cameron's physically-valid melt generator
+# (MeltSpec::with_excluded_volume / try_melt) and min_pair_distance. My round-3
+# fixture was an ideal walk with no excluded volume, which inflates
+# length-feasibility; cross-validating against hers is cheaper and more honest
+# than writing a second generator and hoping they agree. Dev-only.
+nerve-melt = { path = "../nerve-melt" }

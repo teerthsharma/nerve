@@ -1,0 +1,12 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# scratch and evidence never ship
+.donotcommit/
+.donotcomit/
+
+# large simulation inputs live in the scratchpad, not the tree
+*.data
+*.input
+*.input.gz
