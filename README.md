@@ -129,7 +129,25 @@ $$
 $$
 
 where $r_{ab}$ are endpoint difference vectors of segment pair $(i,j)$ and $\Omega$
-is the signed spherical-quadrilateral area. There is **no quadrature error term and
+is the signed spherical-quadrilateral area.
+
+The quadrilateral is split into two triangles and each is evaluated by the
+Van Oosterom–Strackee tangent formula, which for a triangle subtended at the
+origin by $\mathbf{a},\mathbf{b},\mathbf{c}$ is
+
+$$
+\tan\!\Big(\frac{\Omega}{2}\Big)
+\;=\;
+\frac{\mathbf{a}\cdot(\mathbf{b}\times\mathbf{c})}
+{\,\|\mathbf{a}\|\|\mathbf{b}\|\|\mathbf{c}\|
++(\mathbf{a}\cdot\mathbf{b})\|\mathbf{c}\|
++(\mathbf{a}\cdot\mathbf{c})\|\mathbf{b}\|
++(\mathbf{b}\cdot\mathbf{c})\|\mathbf{a}\|\,}
+$$
+
+so $\Omega$ is recovered by `atan2` of that numerator and denominator. The sign
+is carried by the scalar triple product in the numerator and needs no separate
+orientation test. There is **no quadrature error term and
 no length constant** — degeneracy is caught by NaN propagation rather than an
 epsilon, which is why bitwise scale invariance holds exactly.
 
@@ -163,9 +181,23 @@ For a knot diagram with $c$ crossings, the Alexander matrix at $t = -1$ has rows
 in which the positive- and negative-crossing forms are exact negatives:
 
 $$
-\big|\Delta(-1)\big| \;=\; \big|\det M\big|,
+\text{positive: } \; t\,x_i - x_j + (1-t)\,x_k
 \qquad
-M^{+}_{\text{row}} = -\,M^{-}_{\text{row}}
+\text{negative: } \; x_i - t\,x_j + (t-1)\,x_k
+$$
+
+Setting $t = -1$ collapses both to integer rows that are **exact negatives**:
+
+$$
+-x_i - x_j + 2x_k
+\qquad\text{against}\qquad
+x_i + x_j - 2x_k
+$$
+
+Negating a row changes only the sign of the determinant, so
+
+$$
+\big|\Delta(-1)\big| \;=\; \big|\det M\big|
 $$
 
 so $|\det|$ is unchanged by crossing sign and **no crossing sign is computed
@@ -187,6 +219,143 @@ a linking number even though it still evaluates. Chains are instead unwrapped by
 accumulating minimum-image **bonds**, a discrete lift through the covering map
 $\mathbb{R}^3 \to \mathbb{R}^3/L\mathbb{Z}^3$, unique up to one box vector. This is
 the load-bearing convention in the repository.
+
+### 5) Why `i128` never overflows — a Hadamard bound on a 3-sparse matrix
+
+The two rows above have **exactly three nonzero entries**, drawn from
+$\{-1,-1,+2\}$ up to sign. So every row of $M$ has 2-norm at most
+
+$$
+\|M_{\text{row}}\|_2 \;\leq\; \sqrt{1^2+1^2+2^2} \;=\; \sqrt{6}
+$$
+
+and Hadamard's inequality bounds the determinant of a $c \times c$ Alexander
+matrix at $t=-1$ by the product of its row norms:
+
+$$
+\big|\Delta(-1)\big| \;=\; |\det M| \;\leq\; \prod_{i=1}^{c} \|M_i\|_2 \;\leq\; 6^{c/2}
+$$
+
+Setting $6^{c/2} < 2^{127}-1 \approx 1.70 \times 10^{38}$ gives the exact ceiling:
+
+$$
+c \;<\; \frac{127 \ln 2}{\tfrac{1}{2}\ln 6} \;=\; \mathbf{98.3 \ \text{crossings}}
+$$
+
+Sparsity is what buys this. A dense matrix with the same entry magnitudes has row
+norm $2\sqrt{c}$, and the two bounds diverge violently:
+
+| crossings $c$ | 3-sparse bound $6^{c/2}$ | dense bound $(2\sqrt{c})^{c}$ |
+|---|---|---|
+| 20 | `1e7.8` | `1e19.0` |
+| 50 | `1e19.5` | `1e57.5` |
+| 98 | `1e38.1` | `1e127.1` |
+
+At the ceiling the sparse structure is worth **89 orders of magnitude**. This is
+the derivation behind `414/414` and `436/436` resolving with zero `i128` overflow,
+and it is what replaces the "few tens of crossings" folklore quoted elsewhere in
+this codebase with a number. Bareiss elimination is fraction-free, so every
+intermediate minor is itself a determinant of a submatrix and obeys the same
+bound — the ceiling applies to the whole elimination, not just its result.
+
+### 6) The knotting fractions are one parameter measured four times
+
+Knotting probability in a melt follows the standard exponential form
+
+$$
+P_{\text{knot}}(N) \;=\; 1 - e^{-N/N_0}
+\qquad\Longrightarrow\qquad
+N_0 \;=\; \frac{-N}{\ln\!\big(1-P_{\text{knot}}\big)}
+$$
+
+Inverting each measurement independently:
+
+| chain length $N$ | measured $P_{\text{knot}}$ | implied $N_0$ |
+|---|---|---|
+| 823 (seed 1) | 0.1522 | 4984.5 |
+| 823 (seed 2) | 0.1546 | 4900.4 |
+| 823 (seed 3) | 0.1522 | 4984.5 |
+| 896 ($\kappa=4.00$) | 0.1789 | 4545.7 |
+
+**Mean $N_0 = 4854$, spread 9.0% across two chain lengths and three seeds.** Four
+numbers that were reported separately are one parameter. The fit then makes two
+predictions it did not use:
+
+- **$N=1024$: 19.0%** against the published Kremer-Grest figure of 23.6% for stiff
+  chains — same order, below it, in the direction stiffness predicts.
+- **$N=8408$: 82.3%** for the unswept $\kappa=0.00$ file, where ~75% knotting was
+  expected on independent grounds.
+
+*This is a two-length fit to one assumed functional form, not a measurement of
+$N_0$.* Its value is that it is falsifiable on a substrate already in hand: an
+explicit subset of $\kappa=0.00$ either lands near 82% or kills the form.
+
+### 7) The unwrapping precondition cannot fail on this substrate
+
+`unwrap_chain` requires every bond shorter than `box_len/2`, and the README lists
+the converse as a caveat. On Kremer-Grest melts that caveat is unreachable:
+
+| $\kappa$ | `box_len/2` | max bond | margin |
+|---|---|---|---|
+| 5.50 | 36.873 | 1.18336 | **31.2×** |
+| 4.00 | 38.580 | 1.18336 | **32.6×** |
+
+In distribution units the melt-wide maximum bond sits `6.7 sd` above the mean,
+while breaking the precondition would take **1,095 sd**. The stronger statement is
+structural rather than statistical: the FENE potential diverges at $R_0 = 1.5\sigma$,
+so no bond of *any* Kremer-Grest configuration can exceed it, and
+
+$$
+\frac{\text{box\_len}/2}{R_0} \;=\; \frac{36.873}{1.5} \;=\; 24.6
+$$
+
+The bound is imposed by the force field, not by the sample. The caveat stays in
+Limitations because it is real for arbitrary input, but it cannot fire here.
+
+### 8) Why the closure count is ~40
+
+Each stochastic closure is one draw from a categorical distribution over knot
+types; the modal label's standard error at $p \approx 0.96$ is $\sqrt{p(1-p)/n}$:
+
+| closures $n$ | 10 | 20 | 40 | 80 | 160 |
+|---|---|---|---|---|---|
+| `se(p_modal)` | 0.062 | 0.044 | **0.031** | 0.022 | 0.016 |
+
+The measured modal probability climbs `0.900 → 0.9625` across that ladder, and the
+entire remaining movement above $n=40$ is smaller than one standard error at
+$n=40$. Past 40 the estimator is paying $O(M^2)$ Alexander evaluations to chase
+noise — which is the whole cost argument, since Alexander is quadratic per closure:
+
+$$
+t(N) \;=\; 0.11\,\text{s} \times \Big(\tfrac{N}{823}\Big)^{2}
+\;\Longrightarrow\;
+t(8408) = 11.5\,\text{s/chain},
+\quad 517\ \text{chains} = \mathbf{1.65\ hours}
+$$
+
+### 9) The periodic precondition is provable, and geometrically vacuous here
+
+Specialising Panagiotou (2015 §4.1) to a bounding-sphere test: for two closed
+curves with bounding radii $r_A, r_B$ in a cubic box of side $L$,
+
+$$
+r_A + r_B \;<\; \tfrac{L}{2}
+\;\;\Longrightarrow\;\;
+\text{at most one lattice image carries, and } \mathrm{Lk}_{\text{nearest}} = \mathrm{Lk}_{\text{periodic}}
+$$
+
+The implication is sound and the guard is cheap. **It holds for 0 of 180,321 real
+melt pairs** — an equilibrated chain at these lengths has a bounding radius
+comparable to the box itself, so the antecedent is never satisfied and the theorem
+never licenses the cheap path.
+
+Two things follow, and they cut in opposite directions from each other. The
+`~10.7 box lengths` figure quoted for these chains is a **contour** ratio and does
+*not* bear on this test, which constrains spatial extent. And because the failure
+is two-sided — nearest image reads `0` against a true `−1` at $\kappa=5.50$ pair
+295,344, and `+1` against a true `0` at $\kappa=4.00$ pair 185,372 — no sign
+convention or scale factor repairs it. A one-sided error could be corrected; this
+one has to be replaced.
 
 ---
 
@@ -329,8 +498,8 @@ and `0.0564` against `0.201` hand-grown, with a Theorem 2 ceiling of `1/414 =
 `≈11.5 s/chain` at 8,408 beads and **≈1.6 hours** for all 517 chains. That file is
 where ~75% knotting lives and it needs an explicit subset.
 
-> **Provenance note.** The periodic-linking and knot-ceiling figures in this section
-> and in Limitations were measured in follow-up crates (`nerve-periodic`,
+> **Provenance note.** The periodic-linking and knot-ceiling figures in this section,
+> in Theoretical Foundation §9, and in Limitations were measured in follow-up crates (`nerve-periodic`,
 > `nerve-knot`) that are **not yet included in this repository**. They are reported
 > here because they retract claims this README previously made; the producing code
 > will land in a later commit. Every figure attributed to the eight crates below is
