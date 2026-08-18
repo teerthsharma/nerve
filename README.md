@@ -46,9 +46,10 @@ constant — plus writhe, closure ensembles, and the Alexander determinant at
 `t = −1`, where positive- and negative-crossing rows are exact negatives and
 `|det|` therefore requires no crossing signs at all. Against MD-equilibrated
 Kremer-Grest melts from Svaneborg & Everaers (Zenodo 7319837), the measured FENE
-bond distribution is `sd/mean = 3.401%`, the knotted fraction is 15.2% at N=823
-against a published 23.6% at N=1024, and the single-nearest-image convention
-resolves to `frac_ambiguous = 0.000`. Four blindness hypotheses were tested and
+bond distribution is `sd/mean = 3.401%` and the knotted fraction is 15.2% at
+N=823 against a published 23.6% at N=1024. The single-nearest-image convention
+used for periodic linking is shown here to be **wrong on real melts**, producing
+both false negatives and false positives. Four blindness hypotheses were tested and
 three were withdrawn on measurements taken here. 224 tests pass; ten are kept
 deliberately failing to record predictions that turned out false.
 
@@ -296,13 +297,13 @@ title is the chain count, not beads per chain.**
 | FENE bond mean | **0.96401** | literature `l_b = 0.965 σ` |
 | FENE bond sd | 0.03279 | **relative sd 3.401%**, range 0.845–1.183 |
 | max bond | 1.18336 | **6.7 sd** above mean over 340k bonds |
-| `frac_ambiguous` | **0.000** | at each N's measured p95; `mean_carriers 0.05–0.20` |
+| periodic-image disagreement | **4/8 and 2/8** | hardest pairs, κ=5.50 / κ=4.00 — nearest image vs full carrier set |
 | **knotted fraction, N=823** | **0.1522 / 0.1546 / 0.1522** | seeds 1/2/3 — 15.2% ± 0.2% |
 | **knotted fraction, N=896** | **0.1789** | κ=4.00; monotone in N |
 | determinant resolved | **414/414, 436/436** | zero `i128` overflow |
 | modal closure probability | **0.9709 / 0.9616** | 20 stochastic closures per chain |
 | MIC proxy agreement | **409/414 (98.8%)**, 427/436 (97.9%) | vs the stochastic mode |
-| determinant collisions | **4.11% / 3.67%** | chains sharing `\|Δ(−1)\|` with another knot — lower bound |
+| pair-ambiguous chains | **0.97% / 2.66%** | table truncated at ≤9 / ≤10 crossings; `(\|Δ(−1)\|, \|Δ(−2)\|)` still degenerate |
 
 The knotting fractions are the load-bearing external check: published Kremer-Grest
 melts give 23.6% at N=1024 for stiff chains, and these 823- and 896-bead
@@ -328,10 +329,24 @@ and `0.0564` against `0.201` hand-grown, with a Theorem 2 ceiling of `1/414 =
 `≈11.5 s/chain` at 8,408 beads and **≈1.6 hours** for all 517 chains. That file is
 where ~75% knotting lives and it needs an explicit subset.
 
-The second row of that last table is a result the archive alone could give: the
-single-nearest-image convention shipped documented as *genuinely unresolved*, and
-on real melts never more than one periodic image carries linking — despite chains
-spanning ~10.7 box lengths.
+> **Provenance note.** The periodic-linking and knot-ceiling figures in this section
+> and in Limitations were measured in follow-up crates (`nerve-periodic`,
+> `nerve-knot`) that are **not yet included in this repository**. They are reported
+> here because they retract claims this README previously made; the producing code
+> will land in a later commit. Every figure attributed to the eight crates below is
+> reproducible from this tree today.
+
+**The single-nearest-image convention is wrong on real melts, and the archive is
+what showed it.** A provable precondition exists — for closed curves with bounding
+radii `r_A, r_B` in a cubic box of side `L`, `r_A + r_B < L/2` implies at most one
+lattice image carries, so the nearest image *equals* the periodic linking number
+(Panagiotou 2015 §4.1, specialised to a sphere test). **It holds for 0 of 180,321
+real melt pairs.** Where it fails, the cheap path errs in both directions: at
+κ=5.50 pair 295,344 the nearest image carries `0` against a true periodic `−1` — an
+entangled pair reported unentangled — and at κ=4.00 pair 185,372 it carries `+1`
+against a true `0`. No sign or scale correction repairs a two-sided error. Note the
+`~10.7 box lengths` figure quoted for these chains is a **contour** ratio, not
+spatial extent, and spatial extent is what the theorem constrains.
 
 `|Lk|` significance is **lower** on real melts than on synthetic fixtures, which
 made one withdrawal thinner rather than firmer: p95 `|Lk|` is `0.0191` at N=20,
@@ -462,12 +477,17 @@ density.
 **Periodic linking is not solved.** `linking_number` uses the single nearest image
 by centroid separation. The published treatment is Panagiotou, *J. Comput. Phys.*
 **300**, 533 (2015), implemented in TEPPP as `periodic_lk`, and is not ported here.
-`image_spread` bounds the ambiguity; the real-melt `frac_ambiguous = 0.000` is
-evidence, not a proof.
+`image_spread` bounds the ambiguity, and on real melts that ambiguity is real: the
+nearest image disagrees with the full carrier set on 4 of 8 hardest κ=5.50 pairs
+and 2 of 8 at κ=4.00, in both directions.
 
 **`|Δ(−1)|` is not a complete invariant** — 4₁ and 5₁ both give 5, measured here
-rather than cited. Determinants at `t = −1` with `t = −2` still fail to separate
-some prime knots at 8+ crossings.
+rather than cited. The pair `(|Δ(−1)|, |Δ(−2)|)` first fails at **crossing 9** for
+prime knots (5 pairs: 6₁/9₄₆, 7₄/9₂, 8₁₄/9₈, 8₁₈/9₂₄, 9₂₈/9₂₉) and at **crossing 8**
+once composites count (8₂₀ against the granny knot 3₁#3₁). **The obstruction is the
+polynomial, not the evaluation points**: all five prime pairs share their entire
+Alexander polynomial, and through 10 crossings 40 of 40 collisions are
+polynomial-identical, so a third evaluation point removes none of them.
 
 **The minimally-interfering closure is a bounding-sphere proxy** for the convex
 hull and must not be quoted as MIC proper.
